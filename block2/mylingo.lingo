@@ -1,0 +1,15 @@
+term = int | var | add | mul | sub | div | neg | pow;
+
+int = ws digit+$d ws {Int(s2i($d))};
+var = ws letter+$v ws {Var($v)};
+
+add = "(" ws term:l ws "+" ws term:r ws ")" ws { Add(:l, :r) };
+mul = "(" ws term:l ws "*" ws term:r ws ")" ws { Mul(:l, :r) };
+sub = "(" ws term:l ws "-" ws term:r ws ")" ws { Sub(:l, :r) };
+div = "(" ws term:l ws "/" ws term:r ws ")" ws { Div(:l, :r) };
+neg = ws "-" ws term:t ws { Neg(:t) };
+pow = "(" ws term:l ws "^" ws term:r ws ")" ws { Pow(:l, :r) };
+
+digit = '0'-'9';
+letter = 'a'-'z' | 'A'-'Z';
+ws = (' ' | '\n' | '\t' | '\r')*;
