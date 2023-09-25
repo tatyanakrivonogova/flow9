@@ -1,0 +1,12 @@
+import string;
+
+convertIntArrayToStringArray(intArray: [int]) -> [string] {
+    // strGlue(map(intArray, i2s), ", ");
+    map(intArray, i2s);
+}
+
+main() {
+    intArray = [1, 2, 3];
+    println(convertIntArrayToStringArray(intArray));
+    quit(0);
+}

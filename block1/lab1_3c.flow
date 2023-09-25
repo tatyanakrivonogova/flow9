@@ -1,0 +1,23 @@
+import runtime;
+import string;
+
+fib(n: int, head: ref [int]) -> [int] {
+    len = length(^head);
+    if (len == n) {
+        ^head;
+    } else {
+        if (len == 0) {
+            refArrayPush(head, 0);
+        } else if (len == 1) {
+            refArrayPush(head, 1);
+        } else {
+            refArrayPush(head, (^head)[len-1] + (^head)[len-2]);
+        }
+        fib(n, head);
+    }
+}
+
+main() {
+    println(fib(50, ref []));
+    quit(0);
+}
