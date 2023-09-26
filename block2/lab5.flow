@@ -219,10 +219,13 @@ simplify(e: Expr) -> Expr {
                 Pow(l1, Int(2));
             }
             else if (getExprType(l1) == "^" && getExprType(r1) == "var" && getVarName(l1) == getVarName(r1)) {
-                Pow(r1, Int(argToInt(getExprArgs(l1)[1])+1));
+                simplify(Pow(r1, Int(argToInt(getExprArgs(l1)[1])+1)));
             }
             else if (getExprType(l1) == "var" && getExprType(r1) == "^" && getVarName(l1) == getVarName(r1)) {
-                Pow(l1, Int(argToInt(getExprArgs(r1)[1])+1));
+                simplify(Pow(l1, Int(argToInt(getExprArgs(r1)[1])+1)));
+            }
+            else if (getExprType(l1) == "^" && getExprType(r1) == "^" && getVarName(l1) == getVarName(r1)) {
+                simplify(Pow(getExprArgs(l1)[0], Int(argToInt(getExprArgs(l1)[1])+argToInt(getExprArgs(r1)[1]))));
             }
             else Mul(l1, r1);
         }
@@ -244,8 +247,19 @@ simplify(e: Expr) -> Expr {
                     Div(Int(1), l1);
                 } 
                 else {
-                    Div(Int(1), Pow(l1, Int(argToInt(getExprArgs(r1)[1])-1)));
+                    simplify(Div(Int(1), Pow(l1, Int(argToInt(getExprArgs(r1)[1])-1))));
                 }
+            }
+            else if (getExprType(l1) == "^" && getExprType(r1) == "var" && getVarName(l1) == getVarName(r1)) {
+                simplify(Pow(r1, Int(argToInt(getExprArgs(l1)[1])-1)));
+            }
+            else if (getExprType(l1) == "^" && getExprType(r1) == "^" && getVarName(l1) == getVarName(r1)) {
+                if (argToInt(getExprArgs(l1)[1]) >= argToInt(getExprArgs(r1)[1])) {
+                    simplify(Pow(getExprArgs(l1)[0], Int(argToInt(getExprArgs(l1)[1])-argToInt(getExprArgs(r1)[1]))));
+                } else {
+                    simplify(Div(Int(1), Pow(getExprArgs(l1)[0], Int(argToInt(getExprArgs(r1)[1])-argToInt(getExprArgs(l1)[1])))));
+                }
+                
             }
             else Div(l1, r1);
         }
@@ -265,6 +279,9 @@ simplify(e: Expr) -> Expr {
             else if (l1 == Int(1)) {
                 Int(1);
             } 
+            else if (getExprType(r1) == "neg") {
+                Div(Int(1), Pow(getExprArgs(l1)[0], Int(argToInt(getExprArgs(r1)[0]))));
+            }
             else Pow(l1, r1);
         }
         default : e
@@ -316,22 +333,27 @@ main() {
     vars = setTreeValues(TreeEmpty(), [Pair("x", 4), Pair("y", 2), Pair("z", 8)]);
 
 // big test for simple grammar, differentiation, simplifying and calculating with vars
-    str = "((y / x) - (z + 1))";
-    ast = strToAst(str);
-	println(ast);
-    println(astToStr(ast));
+    // str = "((y / x) - (z + 1))";
+    // ast = strToAst(str);
+	// println(ast);
+    // println(astToStr(ast));
 
-    diff = differentiation(ast, "y");
-    println(astToStr(diff));
-    println(astToStr(simplify(diff)));
+    // diff = differentiation(ast, "y");
+    // println(astToStr(diff));
+    // println(astToStr(simplify(diff)));
 
-    println(calculate(ast, vars));
-    println(calculate(diff, vars));
+    // println(calculate(ast, vars));
+    // println(calculate(diff, vars));
 
 
 // test simplifying of polinoms
-    // str = "(4 * (x / (x ^ 1)))";
-    // println(astToStr(simplify(strToAst(str))));
+    //str = "(4 * (x / (x ^ 1)))";
+    //str = "(x ^ -5)";
+    //println(astToStr(simplify(strToAst(str))));
+
+// test simplifying of arithmetic expression
+    str = "(((3 ^ 1) - (2 * 0)) + (6 - 0))";
+    println(astToStr(simplify(strToAst(str))));
 
 
 // rational function test
