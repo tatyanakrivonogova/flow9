@@ -1,0 +1,39 @@
+import lingo/lab13/annotated_nemo_grammar;
+import string;
+
+export {
+    formulaToString(f : Formula) -> string {
+        switch (f) {
+            Predicat(op, f1, f2) : "(" + formulaToString(f1) + " " + op + " " + formulaToString(f2) + ")";
+            Any(decl, formula) : "(∀ " + declToString(decl) + " " + formulaToString(formula) + ")";
+            Exist(decl, formula) : "(∃ " + declToString(decl) + " " + formulaToString(formula) + ")";
+            DirectRelation(op, e1, e2) : "(" + exprToString(e1) + " " + op + " " + exprToString(e2) + ")";
+            InvertRelation(op, e1, e2) : "(NOT(" + exprToString(e1) + " " + op + " " + exprToString(e2) + "))";
+            True() : "True";
+            False() : "False";
+        }
+    }
+
+    declToString(decl: VarDecl) -> string {
+        "VAR " + decl.var.name + " : " + typeToString(decl.type) + "; ";
+    }
+
+    typeToString(type: Type) -> string{
+        switch (type) {
+            Int(): "INT";
+            Array(t): "[" + typeToString(t) + "]";
+        }
+    }
+
+    exprToString(e: Expr) -> string {
+        switch(e) {
+            Neg(ex) : "-" + exprToString(ex);
+            Number(n) : i2s(n);
+            Var(name) : name;
+            ArrayOfValues(first, nums) : "[" + strGlue(concat([i2s(first.number)], map(nums, \num -> i2s(num.number))), ", ") + "]";
+            ArExpr(op, e1, e2) : "(" + exprToString(e1) + " " + op + " " + exprToString(e2) + ")";
+            App(arr, index) : "APP(" + exprToString(arr) + ", " + exprToString(index) + ")";
+            Upd(arr, index, value) : "UPD(" + exprToString(arr) + ", " + exprToString(index) + ", " + exprToString(value) + ")";
+        }
+    }
+}

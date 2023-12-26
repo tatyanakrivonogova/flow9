@@ -1,0 +1,43 @@
+export {
+    HoareTriple : (pre : Precondition, program : Program, post : Postcondition);
+
+    Precondition : (decls : [VarDecl], f : Formula);
+    Postcondition : (f : Formula);
+
+    Formula ::= Predicat, Any, Exist, Relation, True, False;
+    Predicat : (op : string, f1 : Formula, f2 : Formula);
+    Any : (decl : VarDecl, f : Formula);
+    Exist : (decl : VarDecl, f : Formula);
+    True : ();
+    False : ();
+
+    Program : (decl : [VarDecl], body : Body);
+
+    Type ::= Int, Array;
+    Int();
+    Array(t : Type);
+    VarDecl : (var : Var, type : Type);
+
+    Var : (name : string);
+    Number : (number : int);
+    ArrayOfValues : (first : Number, numbers : [Number]);
+    Operand ::= Number, Var, ArrayOfValues;
+    Relation ::= DirectRelation, InvertRelation;
+    DirectRelation : (op : string, e1 : Expr, e2 : Expr);
+    InvertRelation : (op : string, e1 : Expr, e2 : Expr);
+
+    Expr ::= Operand, ArExpr, FuncExpr, Neg;
+    ArExpr : (op : string, e1 : Expr, e2 : Expr);
+    FuncExpr ::= App, Upd;
+    App : (arr : Expr, index : Expr);
+    Upd : (arr : Expr, index : Expr, value : Expr);
+    Neg : (e : Expr);
+
+
+    Body ::= Assign, Test, Composition, Choice, Iteration;
+    Assign : (var : Var, value : Expr);
+    Test : (r : Relation);
+    Choice : (head : Body, tail : [Body]);
+    Composition : (head : Body, tail : [Body]);
+    Iteration : (body : Body, f : Formula);
+}

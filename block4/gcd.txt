@@ -1,0 +1,16 @@
+{ VAR a : INT; VAR b : INT; 
+(x == a ∧ y == b) }
+VAR x : INT; VAR y : INT;
+((
+    {
+        (x > y)?; 
+        x := (x - y)
+    } 
+    U 
+    {
+        (x < y)?;
+        y := (y - x)
+    }
+))* { 1 == 1 }
+{ (( ( ∃ VAR m : INT (m > 0 ∧ a == (m * x)) ) ∧ ( ∃ VAR n : INT (n > 0 ∧ b == (n * x)) ) ) 
+∧ ( ∀ VAR z : INT (((∃ VAR p : INT (p > 0 ∧ a == (p * z)) ) ∧ (∃ VAR q : INT (q > 0 ∧ b == (q * z)) )) → z <= x)) ) }

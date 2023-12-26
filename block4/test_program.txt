@@ -1,0 +1,9 @@
+{ VAR a : INT; VAR b : INT;
+(x == a ∧ y == b) }
+VAR x : INT; VAR y : INT;
+{
+	x := (x + y);
+	y := (x - y);
+	x := (x - y)
+}
+{ (x == b ∧ y == a) }

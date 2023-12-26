@@ -1,0 +1,7 @@
+{ VAR a : INT; VAR b : INT; 
+(x == a ∧ y == b) }
+VAR x : INT; VAR y : INT; VAR z : INT;
+(
+    z:= x U z := y
+)
+{ ( ∃ VAR m : INT ((m == a ∨ m == b) ∧ z == m) ) }

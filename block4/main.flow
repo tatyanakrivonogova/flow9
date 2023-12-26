@@ -1,0 +1,220 @@
+import lingo/pegcode/driver;
+import lingo/lab13/annotated_nemo_grammar;
+import lingo/lab13/string_converter;
+
+
+stringToHoareTriple(trio : string) -> HoareTriple {
+	lingoGrammarOp : ref Maybe<[PegOp]> = ref None();
+	parsic(onlyOnce(lingoGrammarOp, \ -> {
+			   compilePegGrammar("#include lingo/lab13/annotated_nemo.lingo");
+		   }), trio, defaultPegActions);
+}
+
+generateVC(triple : HoareTriple) -> [Formula] {
+	fi = getPredcondition(triple);
+	program = getProgram(triple);
+	psi = getPostcondition(triple);
+    VC(fi, program, psi);
+}
+
+
+VC(fi : Formula, b : Body, psi : [Formula]) -> [Formula] {
+	switch(b) {
+		Assign(v, expr) : map(psi, \psi1 -> Predicat("->", fi, replaceVarInFormula(psi1, v, expr)));
+        Composition(head, bodyTail) : {
+            length = 1 + length(bodyTail);
+            if (length == 1) VC(fi, head, psi)
+            else {
+                beta = bodyTail[length-2];
+                alpha = Composition(head, take(bodyTail, length-2));
+                VC(fi, alpha, VC(True(), beta, psi));
+            }
+        };
+		Test(xi) : map(psi, \psi1 -> Predicat("->", fi, Predicat("->", xi, psi1)));
+		Choice(head, bodyTail) : fold(map(bodyTail, \t -> VC(fi, t, psi)), VC(fi, head, psi), concat);
+		Iteration(alpha, xi) : concat([Predicat("->", fi, xi)], VC(xi, alpha, [xi]));
+	}
+}
+
+replaceVarInFormula(f : Formula, v : Var, expr : Expr) -> Formula {
+	switch(f) {
+		Predicat(op, p1, p2) : Predicat(op, replaceVarInFormula(p1, v, expr), replaceVarInFormula(p2, v, expr));
+        Any(decl, p) : if (v == getVar(decl)) Any(decl, p) else Any(decl, replaceVarInFormula(p, v, expr));
+		Exist(decl, p) : if (v == getVar(decl)) Exist(decl, p) else Exist(decl, replaceVarInFormula(p, v, expr));
+		DirectRelation(op, e1, e2) : DirectRelation(op, replaceVarInExpr(e1, v, expr), replaceVarInExpr(e2, v, expr));
+        InvertRelation(op, e1, e2) : InvertRelation(op, replaceVarInExpr(e1, v, expr), replaceVarInExpr(e2, v, expr));
+		default : f;
+	}
+}
+
+replaceVarInExpr(e : Expr, v : Var, expr : Expr) -> Expr {
+	switch(e) {
+        Var(w) : if (v == e) expr else e;
+        Neg(e1) : Neg(replaceVarInExpr(e1, v, expr));
+		ArExpr(op, e1, e2) : ArExpr(op, replaceVarInExpr(e1, v, expr), replaceVarInExpr(e2, v, expr));
+		App(arr, ind) : App(replaceVarInExpr(arr, v, expr), replaceVarInExpr(ind, v, expr));
+		Upd(arr, ind, val) : Upd(replaceVarInExpr(arr, v, expr), replaceVarInExpr(ind, v, expr), replaceVarInExpr(val, v, expr));
+		default : e;
+	}
+}
+
+getVar(decl : VarDecl) -> Var {
+	switch(decl){
+		VarDecl(v, t) : v;
+	}
+}
+
+getPredcondition(t : HoareTriple) -> Formula {
+	switch(t) {
+		HoareTriple(fi, program, psi) : 
+			switch(fi) {
+				Precondition(decl, f) : f;
+			};
+	}
+}
+
+getProgram(t : HoareTriple) -> Body {
+	switch(t) {
+		HoareTriple(fi, program, psi) : 
+			switch(program) {
+				Program(decl, body) : body;
+			}
+	}
+}
+
+getPostcondition(t : HoareTriple) -> [Formula] {
+	switch(t) {
+		HoareTriple(fi, program, psi) : 
+			switch(psi) {
+				Postcondition(f) : [f];
+			}
+	}
+}
+
+
+generateZ3(triple : HoareTriple, formulas : [Formula]) -> string {
+
+	if (formulas == [])
+		""
+	else
+		translateToZ3(triple, formulas);	
+}
+
+translateToZ3(triple: HoareTriple, formulas : [Formula]) -> string {
+	strGlue(map(getVarDecls(triple), varDeclToZ3), "\n") + "\n" + formulasToZ3(formulas);
+}
+
+getVarDecls(t: HoareTriple) -> [VarDecl] {
+	switch(t) {
+		HoareTriple(pre, program, post) : concat(pre.decls, program.decl)
+	}
+}
+
+varDeclToZ3(decl : VarDecl) -> string {
+	"(declare-const " + varToZ3(decl.var) + " " + typeToZ3(decl.type) + ")";
+}
+
+varToZ3(var: Var) -> string {
+	switch(var) {
+		Var(name) : name
+	}
+}
+
+typeToZ3(type: Type) -> string {
+	switch(type) {
+		Int():
+			"Int";
+		Array(t):
+			"(Array " + typeToZ3(t) + " Int)"
+	}
+}
+
+formulasToZ3(formulas : [Formula]) -> string {
+	strGlue(mapi(formulas, \i, f -> {
+			name = "condition_" + i2s(i);
+			"(push)\n" +
+			"(define-fun " + name + " () Bool " + formulaToZ3(f) + ")\n" +
+			"(assert (not " + name + "))\n"
+		}), 
+	"\n") + 
+	strGlue(mapi(formulas, \i,f -> {
+			"(check-sat)\n" +
+			"(pop)"
+		}), 
+	"\n");
+}
+
+formulaToZ3(f: Formula) -> string {
+	switch (f) {
+		Predicat(op, f1, f2) : "(" + opToZ3(op) + " " + formulaToZ3(f1) + " " + formulaToZ3(f2) + ")";
+		Any(decl, f1): 
+			"(forall ((" + varToZ3(decl.var) + " " + typeToZ3(decl.type) + ")) " + formulaToZ3(f1) + ")";
+		Exist(decl, f1): 
+			"(exists ((" + varToZ3(decl.var) + " " + typeToZ3(decl.type) + ")) " + formulaToZ3(f1) + ")";
+		DirectRelation(op, e1, e2) : {
+			if (op == "!=") "(not (= " + exprToZ3(e1) + " " + exprToZ3(e2) + "))"
+			else if (op == "==") "(= " + exprToZ3(e1) + " " + exprToZ3(e2) + ")"
+			else "(" + op + " " + exprToZ3(e1) + " " + exprToZ3(e2) + ")";
+		}
+		InvertRelation(op, e1, e2) : 
+			"(not " + formulaToZ3(DirectRelation(op, e1, e2)) + ")";
+		True() : "true";
+        False() : "false";
+	}
+}
+
+opToZ3(op : string) -> string {
+	if (op == "∧") "and"
+	else if (op == "∨") "or"
+	else if (op == "->") "=>"
+	else if (op == "→") "=>"
+	else op;
+}
+
+exprToZ3(e : Expr) -> string {
+	switch(e) {
+		Number(n) : i2s(n);
+		Var(name) : name;
+		ArrayOfValues(h, t) : "[" + strGlue(map(concat([h], t), \n -> i2s(n.number)), ", ") + "]";
+		ArExpr(op, e1, e2) : "(" + opToZ3(op) + " " + exprToZ3(e1) + " " + exprToZ3(e2) + ")";
+		App(arr, index) : {
+            "(select " + exprToZ3(arr) + " " + exprToZ3(index) + ")";
+        }
+        Upd(arr, index, value) : {
+            "(store " + exprToZ3(arr) + " " + exprToZ3(index) + " " + exprToZ3(value) + ")";
+        }
+		Neg(e1) : {
+			exprToZ3(ArExpr("-", Number(0), e1));
+		}
+	}
+}
+
+main(){
+	//str = "#include lingo/lab13/assign.txt";
+	//str = "#include lingo/lab13/choice.txt";
+	//str = "#include lingo/lab13/test.txt";
+	//str = "#include lingo/lab13/iteration.txt";
+	
+	//str = "#include lingo/lab13/exist.txt";
+	str = "#include lingo/lab13/any.txt";
+
+	//str = "#include lingo/lab13/test_program.txt";
+	//str = "#include lingo/lab13/sqrt.txt";
+	triple = stringToHoareTriple(str);
+    println(triple);
+    println("\n");
+
+	result = generateVC(triple);
+    println(result);
+	println("\n");
+
+
+	mapi(result, \i, r -> {
+		println("condition " + i2s(i+1) + ":");
+		println(formulaToString(r));
+	});
+	println("\n");
+
+	println(generateZ3(triple, result));
+	quit(0);
+}

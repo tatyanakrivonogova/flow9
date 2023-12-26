@@ -1,0 +1,15 @@
+{ VAR a : INT; VAR b : INT; 
+(x == a ∧ y == b) }
+VAR x : INT; VAR y : INT;
+(
+    {
+        (x >= y)?; 
+        x := (x - y)
+    } 
+    U 
+    {
+        (x < y)?;
+        x := 0
+    }
+)
+{ ( ∀ VAR m : INT (m < 0 → m < x) ) }
